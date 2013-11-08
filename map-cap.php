@@ -9,11 +9,27 @@ Author URI: http://find.brentshepherd.com/
 */
 
 function mc_add_admin_menu() {
-	if ( function_exists( 'add_options_page' ) ) {
-		$page = add_users_page( 'Map Caps', 'Map Cap', 'manage_options', 'mapcap', 'mc_capabilities_settings_page' );
-	}
+	$page_hook_suffix = add_users_page( 'Map Caps', 'Map Cap', 'manage_options', 'mapcap', 'mc_capabilities_settings_page' );
+	add_action( "admin_print_scripts-{$page_hook_suffix}", 'mc_plugin_admin_scripts' );
 }
 add_action( 'admin_menu', 'mc_add_admin_menu' );
+
+/**
+ * Registers the CSS file for jQuery UI and the JavaScript file of the plugin
+ */
+function mc_plugin_admin_init() {
+	wp_register_style( 'jquery-ui-smoothness', plugins_url( 'smoothness/jquery-ui.min.css', __FILE__ ), '1.10.3' );
+	wp_register_script( 'mc-script', plugins_url( 'map-cap.js', __FILE__ ), array( 'jquery-ui-accordion', 'jquery-ui-tabs' ) );
+}
+add_action( 'admin_init', 'mc_plugin_admin_init' );
+
+/**
+ * Enqueues the already regstered CSS and JavaScript
+*/
+function mc_plugin_admin_scripts() {
+	wp_enqueue_style( 'jquery-ui-smoothness' );
+	wp_enqueue_script( 'mc-script' );
+}
 
 /** 
  * Site admins may want to allow or disallow users to create, edit and delete custom post type.
@@ -39,105 +55,156 @@ function mc_capabilities_settings_page() {
 	// For mapping capabilities, post type needs to have map_meta_cap set to true
 	$mapped_post_types = array_diff( $post_types, $not_mapped );
 
-	echo '<div class="wrap map-cap-settings">';
-	screen_icon();
-	echo '<h2>' . __( 'Map Capabilities', 'map-cap' ) . '</h2>';
+?>
+<div class="wrap map-cap-settings"> 
+	<?php screen_icon(); ?>
+	<h2><?php _e( 'Map Capabilities', 'map-cap' ); ?></h2>
+<?php
 
 	// Start of the Map Meta Cap settings form
-	if( ! empty( $post_types ) || ! empty( $mapped_post_types ) ) {
-		echo '<form id="map-cap-form" method="post" action="">';
+	if ( ! empty( $post_types ) || ! empty( $mapped_post_types ) ) {
+
+?>
+	<form id="map-cap-form" method="post" action="">
+<?php
+
 		wp_nonce_field( 'mc_capabilities_settings', 'mc_nonce' );
 	}
 
-	if ( empty( $mapped_post_types ) ) : ?>
+	if ( empty( $mapped_post_types ) ) {
+
+?>		
 		<h3><?php _e( 'Map Caps', 'map-cap' ); ?></h3>
-		<p><?php _e( 'No custom post types have been registered with a custom capability, public argument set to true and the map_meta_cap argument set to true.', 'map-cap' ) ?></p>
-		<p><?php printf( __( 'Try creating custom post types with the %sCustom Post Type UI plugin%s.', 'map-cap' ), '<a href="http://wordpress.org/extend/plugins/custom-post-type-ui/">', '</a>' )?></p>
-	<?php
-	else:
+		<p><?php _e( 'No custom post types have been registered with a custom capability, public argument set to true and the map_meta_cap argument set to true.', 'map-cap' ); ?></p>
+		<p><?php printf( __( 'Try creating custom post types with the %sCustom Post Type UI plugin%s.', 'map-cap' ), '<a href="http://wordpress.org/extend/plugins/custom-post-type-ui/">', '</a>' ); ?></p>
+<?php
+
+	}
+	else {
+
+?>
+		<div id="mc-tabs" class="form-table">
+			<ul>	
+<?php
+
+		if( ! empty( $post_types ) ) {
+
+?>
+				<li><a href="#mc-force-mapping"><?php _e( 'Force Mapping', 'map-cap' ); ?></a></li>
+<?php
+
+		}
+		foreach ( $mapped_post_types as $post_type ) {
+			$post_type_details 	= get_post_type_object( $post_type );
+
+?>
+				<li><a href="#tabs-<?php echo esc_attr( $post_type ); ?>"><?php echo esc_html( $post_type_details->labels->name ); ?></a></li>
+<?php
+
+		}
+
+?>
+			</ul>
+<?php
+
+		if( ! empty( $post_types ) ) {
+
+?>
+			<div id="mc-force-mapping" class="mc-accordion">
+				<h3><?php _e( 'Custom Post Types', 'map-cap' ); ?></h3>
+				<div class="map-cap">
+					<p><?php _e( 'Select a post type below to have Map Cap attempt to map its capabilities.', 'map-cap' ); ?></p>
+					<p><?php printf( __( "If this does not work, please read the %splugin's FAQ%s for possible causes.", 'map-cap' ), '<a href="http://wordpress.org/extend/plugins/map-cap/faq/">', '</a>' ); ?></p>
+<?php
+
+			foreach( $post_types as $post_type ) {
+				$post_type_details 	= get_post_type_object( $post_type );
+
+?>
+					<label for="<?php echo $post_type; ?>-map">
+						<input type="checkbox" id="<?php echo esc_attr( $post_type ); ?>-map" name="<?php echo esc_attr( $post_type ); ?>-map"<?php checked( $post_type_details->map_meta_cap, 1 ); ?> />
+						<?php echo esc_html( $post_type_details->labels->name ); ?>
+					</label><br/>
+<?php
+
+			}
+
+?>
+				</div>
+			</div>
+<?php
+
+		}				
 		foreach( $mapped_post_types as $post_type ) {
 			
 			$post_type_details 	= get_post_type_object( $post_type );
 			$post_type_cap 		= $post_type_details->capability_type;
 			$post_type_caps		= $post_type_details->cap;
 
-			?>
-			<h3><?php printf( __( '%s Capabilities', 'map-cap' ), $post_type_details->labels->name ); ?></h3>
-			<?php // Allow publish ?>
-			<div class="map-cap">
-				<h4><?php printf( __( "Publish %s", 'map-cap' ), $post_type_details->labels->name ); ?></h4>
-				<?php foreach ( $roles as $role ): ?>
-				<label for="<?php echo $post_type . '-' . $role->name; ?>-publish">
-					<input type="checkbox" id="<?php echo $post_type . '-' . $role->name; ?>-publish" name="<?php echo $post_type . '-' . $role->name; ?>-publish"<?php checked( isset( $role->capabilities[ $post_type_caps->publish_posts ] ), 1 ); ?> />
-					<?php echo $role->display_name; ?>
-				</label>
-				<?php endforeach; ?>
+?>
+			<div id="tabs-<?php echo esc_attr( $post_type ); ?>" class="mc-accordion">
+<?php
+
+			$post_type_arr_map = array(
+				'publish'     => array( 'publish_posts', __( 'Publish %s', 'map-cap' ) ),           // Allow publish
+				'edit'        => array( 'edit_published_posts', __( 'Edit Own %s', 'map-cap' ) ),   // Allow editing own posts
+				'edit-others' => array( 'edit_others_posts', __( "Edit Others' %s", 'map-cap' ) ),  // Allow editing others posts
+				'private'     => array( 'read_private_posts', __( 'View Private %s', 'map-cap' ) ), // Allow reading private posts
+			);
+			foreach ( $post_type_arr_map as $key => $value ) {
+				$capability = $value[0];
+
+?>
+				<h3><?php printf( $value[1], esc_html( $post_type_details->labels->name ) ); ?></h3>
+				<div class="map-cap">
+<?php
+
+				foreach ( $roles as $role ) {
+					$id = esc_attr( $post_type . '-' . $role->name . '-' . $key );
+
+?>
+					<label for="<?php echo $id; ?>">
+						<input type="checkbox" id="<?php echo $id; ?>" name="<?php echo $id; ?>" <?php checked( isset( $role->capabilities[ $post_type_caps->$capability ] ), 1 ); ?>/>
+						<?php echo esc_html( $role->display_name ); ?>
+					</label><br/>
+<?php
+
+				}
+
+?>
+				</div>
+<?php
+
+			}
+
+?>
 			</div>
+<?php
 
-			<? // Allow editing own posts ?>
-			<div class="map-cap">
-				<h4><?php printf( __( "Edit Own %s", 'map-cap' ), $post_type_details->labels->name  ); ?></h4>
-				<?php foreach ( $roles as $role ): ?>
-				<label for="<?php echo $post_type . '-' . $role->name; ?>-edit">
-				  	<input type="checkbox" id="<?php echo $post_type . '-' . $role->name; ?>-edit" name="<?php echo $post_type . '-' . $role->name; ?>-edit"<?php checked( isset( $role->capabilities[ $post_type_caps->edit_published_posts ] ), 1 ); ?> />
-					<?php echo $role->display_name; ?>
-				</label>
-				<?php endforeach; ?>
-			</div>
+		}
 
-			<? // Allow editing others posts ?>
-			<div class="map-cap">
-				<h4><?php printf( __( "Edit Others' %s", 'map-cap' ), $post_type_details->labels->name  ); ?></h4>
-				<?php foreach ( $roles as $role ): ?>
-				<label for="<?php echo $post_type . '-' . $role->name; ?>-edit-others">
-					<input type="checkbox" id="<?php echo $post_type . '-' . $role->name; ?>-edit-others" name="<?php echo $post_type . '-' . $role->name; ?>-edit-others"<?php checked( isset( $role->capabilities[ $post_type_caps->edit_others_posts ] ), 1 ); ?> />
-					<?php echo $role->display_name; ?>
-				</label>
-				<?php endforeach; ?>
-			</div>
+?>
+		</div>
+<?php
 
-			<? // Allow reading private posts ?>
-			<div class="map-cap">
-				<h4><?php printf( __( "View Private %s", 'map-cap' ), $post_type_details->labels->name  ); ?></h4>
-				<?php foreach ( $roles as $role ): ?>
-				<label for="<?php echo $post_type . '-' . $role->name; ?>-private">
-					<input type="checkbox" id="<?php echo $post_type . '-' . $role->name; ?>-private" name="<?php echo $post_type . '-' . $role->name; ?>-private"<?php checked( isset( $role->capabilities[ $post_type_caps->read_private_posts] ), 1 ); ?> />
-					<?php echo $role->display_name; ?>
-				</label>
-				<?php endforeach; ?>
-			</div>
-		<?php } ?>
-		<?php
-	endif; 
+	}
+	if ( ! empty( $post_types ) || ! empty( $not_mapped ) ) {
 
-	if( ! empty( $post_types ) ) :
-	?>
-	<h3><?php _e( 'Force Mapping', 'map-cap' ); ?></h3>
-	<p><?php _e( 'Select a post type below to have Map Cap attempt to map its capabilities.', 'map-cap' ); ?></p>
-	<p><?php printf( __( "If this does not work, please read the %splugin's FAQ%s for possible causes.", 'map-cap' ), '<a href="http://wordpress.org/extend/plugins/map-cap/faq/">', '</a>' ); ?></p>
-	<h4><?php _e( 'Custom Post Types', 'map-cap' ); ?></h4>
-	<div class="map-cap">
-	<?php foreach( $post_types as $post_type ) :
-		$post_type_details 	= get_post_type_object( $post_type );
-		?>
-			<label for="<?php echo $post_type; ?>-map">
-				<input type="checkbox" id="<?php echo $post_type; ?>-map" name="<?php echo $post_type; ?>-map"<?php checked( $post_type_details->map_meta_cap, 1 ); ?> />
-				<?php echo $post_type_details->labels->name; ?>
-			</label>
-	<?php endforeach; ?>
-	<?php endif;
-
-	if( ! empty( $post_types ) || ! empty( $not_mapped ) ) :
-	?>
-	<p class="submit">
-		<input type="submit" name="submit" class="button button-primary" value="<?php _e( 'Save', 'map-cap' ); ?>" />
-	</p>
+?>
+		<p class="submit"><?php printf(
+			'<input type="submit" name="submit" class="button button-primary" value="%s" />', 
+			__( 'Save', 'map-cap' )
+		); ?></p>
 	</form>
-	</div>
-	<?php
-	endif;
-}
+<?php
 
+	}
+
+?>
+</div>
+<?php
+
+}
 
 /** 
  * Save capabilities settings when the admin page is submitted page by adding the capabilitiy
@@ -239,7 +306,7 @@ function mc_save_capabilities() {
 		}
 	}
 
-	$location = admin_url( 'options-general.php?page=mapcap&updated=1' );
+	$location = admin_url( 'users.php?page=mapcap&updated=1' );
 	wp_safe_redirect( $location );
 	exit;
 }
@@ -299,7 +366,7 @@ function mc_post_access_denied_redirect() {
 add_action( 'admin_page_access_denied', 'mc_post_access_denied_redirect', 20 ); //run after other functions
 
 /**
- * Load textdomain
+ * Loads textdomain
  */
 function mc_i18n_support() {
 	load_plugin_textdomain(
