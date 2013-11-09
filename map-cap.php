@@ -31,11 +31,11 @@ function mc_plugin_admin_scripts() {
 	wp_enqueue_script( 'mc-script' );
 }
 
-/** 
+/**
  * Site admins may want to allow or disallow users to create, edit and delete custom post type.
  * This function provides an admin menu for selecting which roles can do what with custom posts.
  **/
-function mc_capabilities_settings_page() { 
+function mc_capabilities_settings_page() {
 	global $wp_roles;
 
 	$role_names = $wp_roles->get_names();
@@ -56,7 +56,7 @@ function mc_capabilities_settings_page() {
 	$mapped_post_types = array_diff( $post_types, $not_mapped );
 
 ?>
-<div class="wrap map-cap-settings"> 
+<div class="wrap map-cap-settings">
 	<?php screen_icon(); ?>
 	<h2><?php _e( 'Map Capabilities', 'map-cap' ); ?></h2>
 <?php
@@ -73,7 +73,7 @@ function mc_capabilities_settings_page() {
 
 	if ( empty( $mapped_post_types ) ) {
 
-?>		
+?>
 		<h3><?php _e( 'Map Caps', 'map-cap' ); ?></h3>
 		<p><?php _e( 'No custom post types have been registered with a custom capability, public argument set to true and the map_meta_cap argument set to true.', 'map-cap' ); ?></p>
 		<p><?php printf( __( 'Try creating custom post types with the %sCustom Post Type UI plugin%s.', 'map-cap' ), '<a href="http://wordpress.org/extend/plugins/custom-post-type-ui/">', '</a>' ); ?></p>
@@ -84,10 +84,10 @@ function mc_capabilities_settings_page() {
 
 ?>
 		<div id="mc-tabs" class="form-table">
-			<ul>	
+			<ul>
 <?php
 
-		if( ! empty( $post_types ) ) {
+		if ( ! empty( $post_types ) ) {
 
 ?>
 				<li><a href="#mc-force-mapping"><?php _e( 'Force Mapping', 'map-cap' ); ?></a></li>
@@ -95,7 +95,7 @@ function mc_capabilities_settings_page() {
 
 		}
 		foreach ( $mapped_post_types as $post_type ) {
-			$post_type_details 	= get_post_type_object( $post_type );
+			$post_type_details = get_post_type_object( $post_type );
 
 ?>
 				<li><a href="#tabs-<?php echo esc_attr( $post_type ); ?>"><?php echo esc_html( $post_type_details->labels->name ); ?></a></li>
@@ -107,7 +107,7 @@ function mc_capabilities_settings_page() {
 			</ul>
 <?php
 
-		if( ! empty( $post_types ) ) {
+		if ( ! empty( $post_types ) ) {
 
 ?>
 			<div id="mc-force-mapping" class="mc-accordion">
@@ -117,11 +117,11 @@ function mc_capabilities_settings_page() {
 					<p><?php printf( __( "If this does not work, please read the %splugin's FAQ%s for possible causes.", 'map-cap' ), '<a href="http://wordpress.org/extend/plugins/map-cap/faq/">', '</a>' ); ?></p>
 <?php
 
-			foreach( $post_types as $post_type ) {
-				$post_type_details 	= get_post_type_object( $post_type );
+			foreach ( $post_types as $post_type ) {
+				$post_type_details = get_post_type_object( $post_type );
 
 ?>
-					<label for="<?php echo $post_type; ?>-map">
+					<label for="<?php echo esc_attr( $post_type ); ?>-map">
 						<input type="checkbox" id="<?php echo esc_attr( $post_type ); ?>-map" name="<?php echo esc_attr( $post_type ); ?>-map"<?php checked( $post_type_details->map_meta_cap, 1 ); ?> />
 						<?php echo esc_html( $post_type_details->labels->name ); ?>
 					</label><br/>
@@ -134,12 +134,11 @@ function mc_capabilities_settings_page() {
 			</div>
 <?php
 
-		}				
-		foreach( $mapped_post_types as $post_type ) {
-			
-			$post_type_details 	= get_post_type_object( $post_type );
-			$post_type_cap 		= $post_type_details->capability_type;
-			$post_type_caps		= $post_type_details->cap;
+		}
+		foreach ( $mapped_post_types as $post_type ) {
+			$post_type_details = get_post_type_object( $post_type );
+			$post_type_cap     = $post_type_details->capability_type;
+			$post_type_caps    = $post_type_details->cap;
 
 ?>
 			<div id="tabs-<?php echo esc_attr( $post_type ); ?>" class="mc-accordion">
@@ -192,7 +191,7 @@ function mc_capabilities_settings_page() {
 
 ?>
 		<p class="submit"><?php printf(
-			'<input type="submit" name="submit" class="button button-primary" value="%s" />', 
+			'<input type="submit" name="submit" class="button button-primary" value="%s" />',
 			__( 'Save', 'map-cap' )
 		); ?></p>
 	</form>
@@ -206,22 +205,22 @@ function mc_capabilities_settings_page() {
 
 }
 
-/** 
+/**
  * Save capabilities settings when the admin page is submitted page by adding the capabilitiy
  * to the appropriate roles.
  **/
 function mc_save_capabilities() {
 	global $wp_roles;
 
-    if ( ! isset( $_POST['mc_nonce'] ) || ! check_admin_referer( 'mc_capabilities_settings', 'mc_nonce' ) || ! current_user_can( 'manage_options' ) )
+	if ( ! isset( $_POST['mc_nonce'] ) || ! check_admin_referer( 'mc_capabilities_settings', 'mc_nonce' ) || ! current_user_can( 'manage_options' ) )
 		return;
 
 	$role_names = $wp_roles->get_names();
 	$roles = array();
 
-	foreach ( $role_names as $key=>$value ) {
-		$roles[ $key ] = get_role( $key );
-		$roles[ $key ]->display_name = $value;
+	foreach ( $role_names as $key => $value ) {
+		$roles[$key] = get_role( $key );
+		$roles[$key]->display_name = $value;
 	}
 
 	$post_types = get_post_types( array( 'public' => true, '_builtin' => false ) );
@@ -233,7 +232,7 @@ function mc_save_capabilities() {
 
 	$force_map_types = get_option( 'mc_force_map_meta_cap', array() );
 
-	foreach( $post_types as $post_type ) {
+	foreach ( $post_types as $post_type ) {
 		// Shared capability required to see post's menu & publish posts
 		if ( ( isset( $_POST[ $post_type.'-map' ] ) && $_POST[ $post_type.'-map' ] == 'on' ) ) {
 			$force_map_types[$post_type] = true;
@@ -247,13 +246,11 @@ function mc_save_capabilities() {
 	$mapped_post_types = array_diff( $post_types, $not_mapped );
 
 	foreach ( $roles as $key => $role ) {
-
-		foreach( $mapped_post_types as $post_type ) {
-
+		foreach ( $mapped_post_types as $post_type ) {
 			$post_type_details = get_post_type_object( $post_type );
-			$post_type_cap 	= $post_type_details->capability_type;
-			$post_type_caps	= $post_type_details->cap;
-			$post_role		= $post_type.'-'.$key;
+			$post_type_cap 	   = $post_type_details->capability_type;
+			$post_type_caps	   = $post_type_details->cap;
+			$post_role		   = $post_type . '-' . $key;
 
 			// Shared capability required to see post's menu & publish posts
 			if ( ( isset( $_POST[ $post_role.'-publish' ] ) && $_POST[ $post_role.'-publish' ] == 'on' ) || ( isset( $_POST[ $post_role.'-edit' ] ) && $_POST[ $post_role.'-edit' ] == 'on' ) || ( isset( $_POST[ $post_role.'-edit-others' ] ) && $_POST[ $post_role.'-edit-others' ] == 'on' ) ) {
@@ -300,7 +297,7 @@ function mc_save_capabilities() {
 
 			// Allow reading private
 			if ( isset( $_POST[ $post_role.'-private' ] ) && $_POST[ $post_role.'-private' ] == 'on' )
-				$role->add_cap( $post_type_caps->read_private_posts);
+				$role->add_cap( $post_type_caps->read_private_posts );
 			else
 				$role->remove_cap( $post_type_caps->read_private_posts );
 		}
@@ -322,11 +319,10 @@ add_action( 'admin_init', 'mc_save_capabilities' );
  **/
 function mc_force_map_meta_cap() {
 	global $wp_post_types;
-	
+
 	$force_map_types = get_option( 'mc_force_map_meta_cap', array() );
 
-	foreach( $force_map_types as $post_type => $force_mapping ) {
-
+	foreach ( $force_map_types as $post_type => $force_mapping ) {
 		if ( ! isset( $wp_post_types[$post_type] ) )
 			continue;
 
@@ -335,7 +331,7 @@ function mc_force_map_meta_cap() {
 
 		// Spoof a capabilities array for the get_post_type_capabilities function
 		$wp_post_types[$post_type]->capabilities = array();
-		foreach( $wp_post_types[$post_type]->cap as $key => $cap )
+		foreach ( $wp_post_types[$post_type]->cap as $key => $cap )
 			$wp_post_types[$post_type]->capabilities[$key] = $cap;
 
 		// Update the post type's capabilities to include the primitive capabilities required by map_meta_cap
@@ -348,17 +344,17 @@ function mc_force_map_meta_cap() {
 add_action( 'init', 'mc_force_map_meta_cap', 10000 );
 
 
-/** 
+/**
  * If a post author doesn't have permission to edit their own custom post types, they are redirected
- * to the post.php page, but what if they don't have permission to edit vanilla posts? WP Breaks. 
+ * to the post.php page, but what if they don't have permission to edit vanilla posts? WP Breaks.
  *
- * This is a bit cludgy, so this function redirects them to that post type's admin index page and adds 
+ * This is a bit cludgy, so this function redirects them to that post type's admin index page and adds
  * a message to show post was published.
  */
 function mc_post_access_denied_redirect() {
 	global $pagenow;
 
-	if( $pagenow == 'edit.php' ) { // @TODO find a way to determine this with better specificity
+	if ( $pagenow == 'edit.php' ) { // @TODO find a way to determine this with better specificity
 		wp_redirect( add_query_arg( array( 'updated' => 1 ), admin_url( 'index.php' ) ) );
 		exit;
 	}
